@@ -14,6 +14,18 @@ You must run the components in the following order: first, the Arduino OpenAPS, 
 
 ## OpenAPS
 
+Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose levels and calculate insulin dosages.
+
+### Setup
+1. Install PlatformIO on your VSCode with Arduino Nano 33 IoT board selected.
+2. Install libraries: ArduinoMqttCLient, WiFiNINA, FreeRTOS_SAMD21.
+3. Add `arduino_secrets.` with WiFi credentials.
+
+### How to compile and execute program
+1. Open `\openAPS\src\main.cpp` in PlatformIO.
+2. Compile and upload to your Arduino board.
+3. Check your output in the serial monitor.
+
 ## Virtual Component
 
 We have provided a C++ file with a template to help you get started on this assignment. The template includes comments with detailed instructions to guide you in creating the virtual insulin pump and virtual CGM, which will relay MQTT messages between the virtual patient and OpenAPS, and vice versa. However, if you prefer, you are free to design and implement your own program from scratch, as long as it meets the project requirements.
