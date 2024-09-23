@@ -21,21 +21,21 @@ struct InsulinTreatment {
 
 class OpenAPS {
 private:
-    // TODO: Define private member variables for OpenAPS class
-    // (ISF, DIA, target_BG, threshold_BG, insulin_treatments, prev_BG, prev_basal_rate)
+    float ISF = 5;
+    int DIA = 90;
+    int target_BG = 100;
+    int threshold_BG = 50;
+    std::vector<InsulinTreatment> insulin_treatments;
+    float prev_BG = -1;
+    float prev_basal_rate = 0.0;
 
 public:
-    OpenAPS(std::vector<InsulinTreatment> bolus_insulins) {
-        // TODO: Initialize OpenAPS with bolus insulins
-    }
+    OpenAPS(std::vector<InsulinTreatment> bolus_insulins) 
+        : insulin_treatments(bolus_insulins) {}
 
-    void clearInsulinTreatments() {
-        // TODO: Implement method to clear insulin treatments
-    }
-
-    void addInsulinTreatment(const InsulinTreatment& treatment) {
-        // TODO: Implement method to add an insulin treatment
-    }
+    void clearInsulinTreatments() { insulin_treatments.clear(); }
+    
+    void addInsulinTreatment(const InsulinTreatment& treatment) { insulin_treatments.push_back(treatment); }
 
     std::pair<float, float> insulin_calculations(long t) {
         // TODO: Implement insulin calculations
@@ -58,7 +58,11 @@ public:
 
 // Global variables
 OpenAPS* openAPS;
-
+volatile float current_BG = 0.0;
+volatile long current_time = 0;
+volatile bool newBGData = false;
+volatile bool newInsulinTreatment = false;
+volatile bool attributeReceived = false;
 
 void onMqttMessage(int messageSize) {
     // TODO: Implement MQTT message callback
