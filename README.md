@@ -19,7 +19,7 @@ Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose leve
 ### Setup
 1. Install PlatformIO on your VSCode with Arduino Nano 33 IoT board selected.
 2. Install libraries: ArduinoMqttCLient, WiFiNINA, FreeRTOS_SAMD21.
-3. Add `arduino_secrets.` with WiFi credentials.
+3. Add `arduino_secrets` with WiFi credentials.
 
 ### How to compile and execute program
 1. Open `\openAPS\src\main.cpp` in PlatformIO.
