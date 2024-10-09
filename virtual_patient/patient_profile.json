@@ -19,28 +19,28 @@
       {
         "time": 1110,
         "duration": 150,
-        "carbs": 300
+        "carbs": 420
       }
     ],
     "bolus_insulins": [
       {
         "time": 450,
-        "dose": 50,
+        "dose": 36,
         "duration": 30
       },
       {
         "time": 750,
-        "dose": 50,
+        "dose": 36,
         "duration": 30
       },
       {
         "time": 930,
-        "dose": 30,
+        "dose": 18,
         "duration": 30
       },
       {
         "time": 1110,
-        "dose": 50,
+        "dose": 42,
         "duration": 30
       }
     ],
