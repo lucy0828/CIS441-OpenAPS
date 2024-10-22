@@ -14,7 +14,7 @@ You must run the components in the following order: first, the Arduino OpenAPS, 
 
 ## OpenAPS
 
-Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose levels and calculate insulin dosages.
+Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose levels and calculate insulin dosages. If the AirPennNet device is not working properly, please use another WiFi or personal hotspot. 
 
 ### Setup
 1. Install PlatformIO on your VSCode with Arduino Nano 33 IoT board selected.
