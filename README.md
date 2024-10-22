@@ -30,6 +30,11 @@ Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose leve
 
 We have provided a C++ file with a template to help you get started on this assignment. The template includes comments with detailed instructions to guide you in creating the virtual insulin pump and virtual CGM, which will relay MQTT messages between the virtual patient and OpenAPS, and vice versa. However, if you prefer, you are free to design and implement your own program from scratch, as long as it meets the project requirements.
 
+If you're experiencing issues running the Virtual Component in your local environment, please use the "OpenAPS Virtual Component" in Codio that we've set up.
+Before running the virtual component, make sure to install the necessary MQTT packages by following the instructions provided here: https://edstem.org/us/courses/63809/discussion/5305349 
+For convenience, compile your code using the Makefile.
+In addition, we've set up Virtual Patient in Codio as well. Please remember to install pip packages and fill the .env file before running the virtual patient. 
+
 ### How to compile and execute program
 1. Complete the main.cpp file with your implementation.
 
