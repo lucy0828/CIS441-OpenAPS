@@ -1,17 +1,11 @@
 # Description: Environment variables for the project
 # Usage: Copy this file to .env and fill in the values, .env files will be ignored by git for security
 TEAM_NAME=
+
 MQTT_HOST=
 MQTT_PORT=
 USERNAME=
 PASSWORD=
 
-TB_ACCESS_TOKEN=
-
-TOPIC_PREFIX=tb-proxy/${TB_ACCESS_TOKEN}
-TB_VP_ATTRIBUTE_TOPIC=${TOPIC_PREFIX}/attributes
-TB_VP_TELEMETRY_TOPIC=${TOPIC_PREFIX}/telemetry
-TB_VP_RPC_TOPIC=${TOPIC_PREFIX}/rpc
-
-INSULIN_TOPIC=cis541-2024/${TEAM_NAME}/insulin-pump
-CGM_TOPIC=cis541-2024/${TEAM_NAME}/cgm
+INSULIN_TOPIC=cis441-541/${TEAM_NAME}/insulin-pump
+CGM_TOPIC=cis441-541/${TEAM_NAME}/cgm
