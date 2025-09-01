@@ -2,3 +2,4 @@ numpy
 scipy
 matplotlib
 paho-mqtt
+python-dotenv
