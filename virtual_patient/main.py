@@ -17,78 +17,62 @@ from mqtt import MQTT
 
 
 class VP_MQTT(MQTT):
-    def __init__(self, host, port, username, password, topics):
+    def __init__(self, host, port, username, password, topics, profile):
         super().__init__(host, port, username, password)
         self.time_step = 0
         self.topics = topics
 
         self.disp_interval = 1  # display interval in seconds
-        
-        self.stated = False
+        self.patient_profile = profile
+        self._parse_profile()
 
         self.client.message_callback_add(f'{topics["VP_ATTRIBUTE_TOPIC"]}/#', self.on_message_profile)
         self.client.message_callback_add(topics["INSULIN_TOPIC"], self.on_message_insulin)
         self.connect()
-        
+
     def on_connect(self, client, userdata, flags, reason_code, properties):
         print(f">>> Connected with result code {reason_code}!")
+
         # Subscribe to the topics
-        client.subscribe(self.topics['VP_ATTRIBUTE_TOPIC'], qos=1)
-        client.subscribe(f'{self.topics["VP_ATTRIBUTE_TOPIC"]}/response/+', qos=1)
+        client.subscribe(f'{self.topics["VP_ATTRIBUTE_TOPIC"]}/request/+', qos=1)
         client.subscribe(self.topics["INSULIN_TOPIC"], qos=1)
 
-        # Request the virtual patient profile
-        print('>>> Requesting Virtual Patient Profile...')
-        client.publish(f'{self.topics["VP_ATTRIBUTE_TOPIC"]}/request/1', '{}', qos=1)
-        
-    def on_message_profile(self, client, userdata, message):
-        """
-        Receive the virtual patient profile and initialize the Bergman model
-        """
-        # Read the patient profile only once
-        if self.stated:
-            return
-        
-        payload = json.loads(message.payload.decode('utf-8'))
+        # publish the initial patient profile
+        client.publish(self.topics['VP_ATTRIBUTE_TOPIC'], json.dumps({'PatientProfile': self.patient_profile}), qos=1)
 
-        if 'PatientProfile' not in payload:
-            print("Warning: No PatientProfile found in the payload.")
-            return
-
-        profile = payload['PatientProfile']
-
+    def _parse_profile(self):
         # Update patient type
-        diabetic = profile['diabetic']
+        diabetic = self.patient_profile['diabetic']
         self.patient_type = 'diabetic' if diabetic else 'normal'
 
         # Update the meal schedule
-        meals = profile['meals']
+        meals = self.patient_profile['meals']
         self.meals = []
         for meal in meals:
             self.meals.append((float(meal['time']), float(meal['carbs']), float(meal['duration'])))
         self.meal_function = Meals(self.meals)
 
-        # Upadta the bolus insulins
-        bolus_insulins = profile['bolus_insulins']
+        # Update the bolus insulins
+        bolus_insulins = self.patient_profile['bolus_insulins']
         self.bolus_insulins = []
         for insulin in bolus_insulins:
             self.bolus_insulins.append((float(insulin['time']), float(insulin['dose']), float(insulin['duration'])))
         self.insulin_function = Insulin(bolus_insulin=self.bolus_insulins)
 
-        print(f">>> Virtual Patient Profile Recieved: \n{self.patient_type=}, \n{self.meals=}, \n{self.bolus_insulins=}")
+        print(f">>> Virtual Patient Profile: \n{self.patient_type=}, \n{self.meals=}, \n{self.bolus_insulins=}")
 
         # Initialize the Bergman model
         self.bergman = Bergman(type=self.patient_type, meals=self.meal_function, insulin=self.insulin_function)
 
         # Update bergman parameters
-        params = profile['bergman_param']
+        params = self.patient_profile['bergman_param']
         self.bergman.update_params(params)
 
         print(f">>> Customized Bergman Parameters: \n{params=}")
         
         # Simulation settings, initialize once, do not update
-        if 'sim_settings' in profile:
-            sim_settings = profile['sim_settings']
+        if 'sim_settings' in self.patient_profile:
+            sim_settings = self.patient_profile['sim_settings']
 
             self.disp_interval = float(sim_settings['disp_interval'])
             self.simu_interval = int(sim_settings['simu_interval'])
@@ -103,9 +87,10 @@ class VP_MQTT(MQTT):
             self.solution[0, :] = self.init_state
 
             print(f">>> Simulation Settings: \n{self.disp_interval=}, \n{self.simu_interval=}, \n{self.simu_length=}, \n{self.init_state=}")
-            
-        self.stated = True
-        
+
+    def on_message_profile(self, client, userdata, message):
+        client.publish(message.topic.replace('/request/', '/response/'), json.dumps({'PatientProfile': self.patient_profile}), qos=1)
+
     def on_message_insulin(self, client, userdata, message):
         # print(f"Received insulin message: {message.payload.decode()}")
         # the basal insulin message handler 
@@ -121,8 +106,6 @@ class VP_MQTT(MQTT):
             while True:
                 time.sleep(self.disp_interval)
 
-                if not self.stated:
-                    continue
                 print('.', end='', flush=True)
                 
                 # simulate one step here
@@ -143,8 +126,8 @@ class VP_MQTT(MQTT):
                 ts = int(datetime.now().timestamp() * 1000)
                 data = {
                     'timestamp': ts,
-                    'Insulin': self.solution[self.time_step][2],
-                    'Glucose': self.solution[self.time_step][0],
+                    'insulin': self.solution[self.time_step][2],
+                    'glucose': self.solution[self.time_step][0],
                 }
                 self.client.publish(self.topics['VP_TELEMETRY_TOPIC'], json.dumps(data), qos=1)
 
@@ -181,8 +164,18 @@ def main():
         'CGM_TOPIC': os.getenv('CGM_TOPIC', f'{topic_prefix}/cgm'),
     }
     print(f'>>> Topic settings from environment: \n{topics=}')
-    
-    vp_mqtt = VP_MQTT(MQTT_HOST, MQTT_PORT, USERNAME, PASSWORD, topics)
+
+    profile = {}
+    try:
+        with open('patient_profile.json', 'r') as infile:
+            profile = json.load(infile)
+    except Exception as e:
+        print(f"Warning: Could not load patient_profile.json: {e}")
+        sys.exit(1)
+
+    print(f'>>> Patient Profile: \n{profile=}')
+
+    vp_mqtt = VP_MQTT(MQTT_HOST, MQTT_PORT, USERNAME, PASSWORD, topics, profile)
     vp_mqtt.loop_forever()
     
 
