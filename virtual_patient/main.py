@@ -17,7 +17,7 @@ from mqtt import MQTT
 
 
 class VP_MQTT(MQTT):
-    def __init__(self, host, port, username, password, topics, profile):
+    def __init__(self, host, port, username, password, topics, profile, no_sync=False):
         super().__init__(host, port, username, password)
         self.time_step = 0
         self.topics = topics
@@ -26,6 +26,9 @@ class VP_MQTT(MQTT):
         self.patient_profile = profile
         self._parse_profile()
 
+        self.no_sync = no_sync
+        self.sync_profile = no_sync
+
         self.client.message_callback_add(f'{topics["VP_ATTRIBUTE_TOPIC"]}/#', self.on_message_profile)
         self.client.message_callback_add(topics["INSULIN_TOPIC"], self.on_message_insulin)
         self.connect()
@@ -33,12 +36,12 @@ class VP_MQTT(MQTT):
     def on_connect(self, client, userdata, flags, reason_code, properties):
         print(f">>> Connected with result code {reason_code}!")
 
-        # Subscribe to the topics
-        client.subscribe(f'{self.topics["VP_ATTRIBUTE_TOPIC"]}/request/+', qos=1)
-        client.subscribe(self.topics["INSULIN_TOPIC"], qos=1)
+        if not self.no_sync:
+            # Subscribe to the topics
+            client.subscribe(f'{self.topics["VP_ATTRIBUTE_TOPIC"]}/request/+', qos=1)
+            client.subscribe(self.topics["INSULIN_TOPIC"], qos=1)
 
-        # publish the initial patient profile
-        client.publish(self.topics['VP_ATTRIBUTE_TOPIC'], json.dumps({'PatientProfile': self.patient_profile}), qos=1)
+            print("Waiting for synchronizing Patient Profile with OpenAPS...")
 
     def _parse_profile(self):
         # Update patient type
@@ -69,7 +72,7 @@ class VP_MQTT(MQTT):
         self.bergman.update_params(params)
 
         print(f">>> Customized Bergman Parameters: \n{params=}")
-        
+
         # Simulation settings, initialize once, do not update
         if 'sim_settings' in self.patient_profile:
             sim_settings = self.patient_profile['sim_settings']
@@ -79,7 +82,7 @@ class VP_MQTT(MQTT):
             self.simu_length = int(sim_settings['simu_length'])
             init_state = sim_settings['init_state']
             self.init_state = [float(init_state['G0']), float(init_state['X0']), float(init_state['I0'])]
-            
+
             # Simulation storage
             self.solution = np.zeros((self.simu_length, 3))
 
@@ -91,50 +94,56 @@ class VP_MQTT(MQTT):
     def on_message_profile(self, client, userdata, message):
         client.publish(message.topic.replace('/request/', '/response/'), json.dumps({'PatientProfile': self.patient_profile}), qos=1)
 
+        print("\nPatient Profile was synchronized to OpenAPS.")
+        self.sync_profile = True
+
     def on_message_insulin(self, client, userdata, message):
         # print(f"Received insulin message: {message.payload.decode()}")
-        # the basal insulin message handler 
+        # the basal insulin message handler
         self.insulin_rate = float(json.loads(message.payload.decode('utf-8'))['insulin_rate'])
-        if hasattr(self, 'insulin_function'): 
+        if hasattr(self, 'insulin_function'):
             self.insulin_function.update_basal_rate(self.insulin_rate)
             print("+", end='', flush=True)
-        
+
     def loop_forever(self):
         try:
             print("Press CTRL+C to exit the simulation loop...")
             self.loop_start()
+
             while True:
                 time.sleep(self.disp_interval)
 
                 print('.', end='', flush=True)
-                
+                if not self.sync_profile:
+                    continue
+
                 # simulate one step here
                 t = self.time_step * self.simu_interval
                 t_next = t + self.simu_interval
                 self.time_step += 1
-                res = solve_ivp(self.bergman.ode, (t, t_next), self.solution[self.time_step-1, :], args=())
+                res = solve_ivp(self.bergman.ode, (t, t_next), self.solution[self.time_step - 1, :], args=())
                 self.solution[self.time_step, :] = deepcopy(res.y[:, -1])
-                
+
                 # virtual CGM sensor, send to openAPS
                 data = {
                     'Glucose': self.solution[self.time_step][0],
                     'time': self.time_step * self.simu_interval,
                 }
                 self.client.publish(self.topics['CGM_TOPIC'], json.dumps(data), qos=1)
-                
+
                 # Dashboard for visualization
                 ts = int(datetime.now().timestamp() * 1000)
                 data = {
                     'timestamp': ts,
-                    'insulin': self.solution[self.time_step][2],
-                    'glucose': self.solution[self.time_step][0],
+                    'Insulin': self.solution[self.time_step][2],
+                    'Glucose': self.solution[self.time_step][0],
                 }
                 self.client.publish(self.topics['VP_TELEMETRY_TOPIC'], json.dumps(data), qos=1)
 
                 if self.time_step >= self.simu_length - 1:
                     print("\n>>> Simulation completed.")
                     break
-                
+
         except Exception as e:
             print(f"{repr(e)}")
             traceback.print_exc()
@@ -142,9 +151,9 @@ class VP_MQTT(MQTT):
             print(">>> Disconnecting from the MQTT broker")
             self.loop_stop()
             self.disconnect()
-    
-    
-def main():        
+
+
+def main(no_sync=False):
     MQTT_HOST = os.getenv('MQTT_HOST')
     MQTT_PORT = int(os.getenv('MQTT_PORT'))
     USERNAME = os.getenv('USERNAME')
@@ -175,9 +184,15 @@ def main():
 
     print(f'>>> Patient Profile: \n{profile=}')
 
-    vp_mqtt = VP_MQTT(MQTT_HOST, MQTT_PORT, USERNAME, PASSWORD, topics, profile)
+    vp_mqtt = VP_MQTT(MQTT_HOST, MQTT_PORT, USERNAME, PASSWORD, topics, profile, no_sync)
     vp_mqtt.loop_forever()
-    
+
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2 or sys.argv[1] not in ["0", "1"]:
+        print("Usage: python main.py <0|1>\n\t0: run without OpenAPS\n\t1: run with OpenAPS")
+        sys.exit(0)
+
+    no_sync = sys.argv[1] == "0"
+
+    main(no_sync)
