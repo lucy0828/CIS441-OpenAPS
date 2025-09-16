@@ -2,15 +2,15 @@
 
 ## Overall Instruction
 
-OpenAPS Logic (on Arduino): Implement the EventualBG algorithm to predict the eventual stable BG level once all active insulin has finished working. Optionally, you can implement COB-based Predictions (COBpredBGs), which predict BG changes based on the announced Carbohydrates on Board (COB).
+**OpenAPS Logic (on Arduino)**: Implement the EventualBG algorithm to predict the eventual stable BG level once all active insulin has finished working. Optionally, you can implement COB-based Predictions (COBpredBGs), which predict BG changes based on the announced Carbohydrates on Board (COB).
 
-Virtual Component (on Codio or Local Machine): Implement a virtual CGM and a virtual insulin pump, which will simulate the real-world components. This will communicate with OpenAPS and a virtual patient through MQTT, serving as a buffer between two components.
+**Virtual Component (on Codio or Local Machine)**: Implement a virtual CGM and a virtual insulin pump, which will simulate the real-world components. This will communicate with OpenAPS and a virtual patient through MQTT, serving as a buffer between two components.
 
-Virtual Patient (on Codio or Local Machine): We provide a Python script that simulates the patient and their BG response. You will need to run this to test the OpenAPS system.
+**Virtual Patient with Patient Profile (on Codio or Local Machine)**: We provide a Python script that simulates the patient and their BG response. You will need to run this to test the OpenAPS system. You can also configure the patient's parameters (meal intake, bolus insulin, etc) and simulation interval settings.
 
-Thingsboard: We provide a virtual patient dashboard, which displays the current glucose levels and insulin status of the virtual patient. You can configure the patient's parameters (meal intake, bolus insulin, etc)  and simulation interval settings.
+**Dashboard (on Codio)**: We provide a virtual patient dashboard, which displays the current glucose levels and insulin status of the virtual patient.
 
-You must run the components in the following order: first, the Arduino OpenAPS, then the virtual component (CGM and insulin pump), and finally the virtual patient. Additionally, ensure that the Thingsboard dashboard configuration is updated before each simulation. Do not modify the dashboard during the simulation, as the settings are shared between OpenAPS and the virtual patient.
+You must run the components in the following order: first, the virtual component (CGM and insulin pump), then the virtual patient, and finally the Arduino OpenAPS.
 
 ## OpenAPS
 
@@ -18,7 +18,7 @@ Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose leve
 
 ### Setup
 1. Install PlatformIO on your VSCode with Arduino Nano 33 IoT board selected.
-2. Install libraries: ArduinoMqttCLient, WiFiNINA, FreeRTOS_SAMD21.
+2. Install libraries: ArduinoMqttClient, WiFiNINA, FreeRTOS_SAMD21.
 3. Add `\openAPS\include\arduino_secrets` with WiFi credentials.
 
 ### How to compile and execute program
@@ -60,9 +60,9 @@ pip install -r requirements.txt
 
 2. Copy .env_template file to .env and fill in the values
 
-3. Run main.py to simulate the virtual patient.
+3. Run main.py to simulate the virtual patient with a mode parameter (0: without OpenAPS, 1: with OpenAPS).
 ```
-python main.py
+python main.py <mode>
 ```
 
 
