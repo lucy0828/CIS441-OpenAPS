@@ -16,13 +16,15 @@ You must run the components in the following order: first, the virtual component
 
 Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose levels and calculate insulin dosages. If the AirPennNet device is not working properly, please use another WiFi or personal hotspot. 
 
+We have two OpenAPS VSCode project folders for each milestones. Please start from the proper milestone folders, `openAPS-milestone1` or `openAPS-milestone2`.
+
 ### Setup
 1. Install PlatformIO on your VSCode with Arduino Nano 33 IoT board selected.
 2. Install libraries: ArduinoMqttClient, WiFiNINA, FreeRTOS_SAMD21.
-3. Add `\openAPS\include\arduino_secrets` with WiFi credentials.
+3. Add `\openAPS-milestone1\include\arduino_secrets` with WiFi credentials.
 
 ### How to compile and execute program
-1. Open `\openAPS\src\main.cpp` in PlatformIO.
+1. Open `\openAPS-milestone1\src\main.cpp` in PlatformIO.
 2. Compile and upload to your Arduino board.
 3. Check your output in the serial monitor.
 
@@ -31,9 +33,10 @@ Implement the OpenAPS logic on Arduino Nano 33 IoT to predict blood glucose leve
 We have provided a C++ file with a template to help you get started on this assignment. The template includes comments with detailed instructions to guide you in creating the virtual insulin pump and virtual CGM, which will relay MQTT messages between the virtual patient and OpenAPS, and vice versa. However, if you prefer, you are free to design and implement your own program from scratch, as long as it meets the project requirements.
 
 If you're experiencing issues running the Virtual Component in your local environment, please use the "OpenAPS Virtual Component" in Codio that we've set up.
-Before running the virtual component, make sure to install the necessary MQTT packages by following the instructions provided here: https://edstem.org/us/courses/63809/discussion/5305349 
+Before running the virtual component, make sure to install the necessary MQTT packages
 For convenience, compile your code using the Makefile.
 In addition, we've set up Virtual Patient in Codio as well. Please remember to install pip packages and fill the .env file before running the virtual patient. 
+
 
 ### How to compile and execute program
 1. Complete the main.cpp file with your implementation.
@@ -47,6 +50,14 @@ make
 3. Execute the program.
 ```
 ./main
+```
+
+### Validator for validating Virtual Component (Miletone 1, Part 1 only)
+
+Virtual Component in the Codio Box contains a validator app. Please execute it with `TEAM_NAME` as a parameter to test whether your Virtual Component was implemented correctly.
+
+```
+./validator <TEAM_NAME>
 ```
 
 ## Virtual Patient
