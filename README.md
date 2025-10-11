@@ -42,10 +42,12 @@ In addition, we've set up Virtual Patient in Codio as well. Please remember to i
 1. Complete the main.cpp file with your implementation.
 
 2. Compile with Makefile.
-
-```
 make
-```
+
+3. export env. and check this is stored in program
+export TEAM_NAME=Steady_State
+echo $TEAM_NAME
+# should print: Steady_State
 
 3. Execute the program.
 ```
@@ -73,7 +75,7 @@ pip install -r requirements.txt
 
 3. Run main.py to simulate the virtual patient with a mode parameter (0: without OpenAPS, 1: with OpenAPS).
 ```
-python main.py <mode>
+python3 main.py 1
 ```
 
 
