@@ -14,7 +14,9 @@ WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 OpenAPS openaps; // main OpenAPS controller instance
 
-// Task initialization
+// RTOS Task initialization
+TaskHandle_t TaskMQTTHandle = NULL;
+TaskHandle_t TaskOpenAPSHandle = NULL;
 
 // Global variables
 volatile float current_BG = 0.0;
@@ -25,9 +27,7 @@ volatile bool attributeReceived = false;
 
 SemaphoreHandle_t xDataSemaphore;   // protects shared BG data
 
-//RTOS handled tasks
-TaskHandle_t TaskMQTTHandle = NULL;
-TaskHandle_t TaskOpenAPSHandle = NULL;
+
 
 //functions
 void TaskMQTT(void *pvParameters);
@@ -185,7 +185,7 @@ void setup() {
     int status = WL_IDLE_STATUS;
     Serial.print("Connecting to WiFi...");
     while (status != WL_CONNECTED) {
-        status = WiFi.begin(WIFI_SSID, WIFI_PASS);
+        status = WiFi.begin(SECRET_SSID, SECRET_PASS);
         delay(5000);
     }
     Serial.println("Connected!");
