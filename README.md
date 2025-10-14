@@ -3,6 +3,8 @@
 ## Screen capture video of the real-time plot on Codio dashboard
 https://www.loom.com/share/d13145ae12cf45369bb17732ea7850a1?sid=79c13524-fdde-4b26-8bbf-6c78ea7a70a0
 
+please refer to codio for the first part of milestone 1
+
 ## Overall Instruction
 
 **OpenAPS Logic (on Arduino)**: Implement the EventualBG algorithm to predict the eventual stable BG level once all active insulin has finished working. Optionally, you can implement COB-based Predictions (COBpredBGs), which predict BG changes based on the announced Carbohydrates on Board (COB).
