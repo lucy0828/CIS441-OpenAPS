@@ -3,7 +3,11 @@
 ## Screen capture video of the real-time plot on Codio dashboard
 https://www.loom.com/share/d13145ae12cf45369bb17732ea7850a1?sid=79c13524-fdde-4b26-8bbf-6c78ea7a70a0
 
+<<<<<<< HEAD
 please refer to codio for the first part of milestone 1
+=======
+Please refer to Codio for milestone 1 part 1
+>>>>>>> origin/main
 
 ## Overall Instruction
 
