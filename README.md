@@ -3,11 +3,7 @@
 ## Screen capture video of the real-time plot on Codio dashboard
 [OPEN APS project demo](https://www.loom.com/share/af499ebd1d734c1cacd3a1d0072272a0?sid=0633ee18-18eb-41f1-be5c-0420056a6a32)
 
-<<<<<<< HEAD
-please refer to codio for the first part of milestone 1
-=======
 Please refer to Codio for milestone 1 part 1
->>>>>>> origin/main
 
 ## Overall Instruction
 
