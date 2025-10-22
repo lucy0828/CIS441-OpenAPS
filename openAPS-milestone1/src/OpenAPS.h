@@ -28,7 +28,8 @@ public:
     // Predict future BG (naive and eventual)
     std::pair<float, float> get_BG_forecast(float current_BG,
                                             float activity,
-                                            float IOB);
+                                            float IOB,
+                                            float prev_BG_5min);
 
     // Determine basal rate based on BG thresholds and forecast
     float get_basal_rate(long t, float current_BG);
