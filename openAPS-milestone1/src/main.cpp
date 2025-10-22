@@ -101,6 +101,8 @@ void onMqttMessage(int messageSize) {
     int tEnd   = payload.indexOf("}", tStart);
     long timeVal = payload.substring(tStart, tEnd).toInt();
 
+    openaps.noteNewBG(glucose, timeVal);  // update prev_BG and last_BG
+
     // update shared BG data
     if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
       current_BG   = glucose;
@@ -143,31 +145,37 @@ void TaskOpenAPS(void *pvParameters) {
     //   insuln_rate = 0.0
     // ==============================
 
-    for (;;) {
+  for (;;) {
     bool localNew = false;
-    float bgValue = 0.0;
+    bool localNewIns = false;
+    float bgValue = 0.0f;
+    long  tValue = 0;
 
     if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
-      localNew  = newBGData;
-      bgValue   = current_BG;
-      newBGData = false;
+      localNew        = newBGData;
+      localNewIns     = newInsulinTreatment;
+      bgValue         = current_BG;
+      tValue          = current_time;
+      newBGData       = false;
+      newInsulinTreatment = false;
       xSemaphoreGive(xDataSemaphore);
     }
 
-    if (localNew) {
-      // Milestone 1 dummy logic
-      float insulin_rate = (bgValue > 120.0) ? 0.5 : 0.0;
+    if (localNew || localNewIns) {
+      // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
+      float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
 
-      String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 2) + "}";
+      String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
       mqttClient.print(msg);
       mqttClient.endMessage();
 
-      Serial.print("BG="); Serial.print(bgValue);
-      Serial.print(" → Published insulin_rate="); Serial.println(insulin_rate);
+      Serial.print("[OpenAPS] t="); Serial.print(tValue);
+      Serial.print(" BG="); Serial.print(bgValue);
+      Serial.print(" → insulin_rate="); Serial.println(insulin_rate, 3);
     }
-    //Serial.println("[TaskOpenAPS] running...");
-    vTaskDelay(pdMS_TO_TICKS(5000));   // one simulation step (~5 s)
+
+    vTaskDelay(pdMS_TO_TICKS(5000));   // ~5 sec (TODO: should we change to 5 min?)
   }
 }
 
