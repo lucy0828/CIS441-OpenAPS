@@ -1,4 +1,5 @@
 #include "OpenAPS.h"
+#include <algorithm>
 
 // Constructor
 OpenAPS::OpenAPS() {}
@@ -16,6 +17,8 @@ std::pair<float, float> OpenAPS::insulin_calculations(long t) {
     
     const float peak_frac = 75.0f / 180.0f; // based on OPENAPS PPT
     const float DIA_min = DIA * 60.0f;
+    const float EPS       = 1e-6f;            // prevent /0
+
     // TODO (Milestone 2): compute activity and IOB using time, dose, duration
     // Example outline:
     // for each treatment:
@@ -23,59 +26,62 @@ std::pair<float, float> OpenAPS::insulin_calculations(long t) {
     //         activity += f(t - treat.time)
     //         IOB += g(t - treat.time)
     for (const auto& tr : treatments) {
-        // get time difference btw now and last dose time
         long dt = t - tr.time;
-        if (dt < 0){
-            total_IOB += tr.dose;   // not effective yet, add all the dose in IOB
-        }
 
-        if (dt >= (long)DIA_min) {
-            // this dose is done → activity=0, IOB=0
-            continue;
-        }
-        
-        // by using this algorithm, no matter how much or less the insulin, time is always DIA_min
-        const float t_peak = DIA_min * peak_frac;
-        const float peak   = (2.0f * tr.dose) / DIA_min;
+        // don't calculate future dose
+        if (dt < 0) continue;
 
-        // ---- calculate current activity(t)（U/min）----
+        // effective window: min(duration, DIA_min)
+        float eff_window = DIA_min;
+        // if (tr.duration > 0) eff_window = std::min<float>(tr.duration, DIA_min);
+
+        // over effective window
+        if (dt >= static_cast<long>(eff_window)) continue;
+
+        float t_peak = eff_window * peak_frac;
+        if (t_peak < EPS) t_peak = EPS;
+
+        // area of bi-linear = tr.dose：
+        // area = 0.5 * base * height = 0.5 * eff_window * peak = dose
+        // → peak = 2*dose/eff_window
+        float peak = (2.0f * tr.dose) / (eff_window + EPS);
+
+        // 3) activity（U/min）
+        float dt_f = static_cast<float>(dt);
         float act_t = 0.0f;
-        if (dt <= t_peak) {
-            // increase part
-            act_t = peak * (static_cast<float>(dt) / t_peak);
+        if (dt_f <= t_peak) {
+            // from 0 linear increase to peak
+            act_t = peak * (dt_f / t_peak);
         } else {
-            // decrease part：from peak to 0
-            float down_len = DIA_min - t_peak;
-            act_t = peak * ((DIA_min - static_cast<float>(dt)) / down_len);
+            // from peak decrease to 0
+            float down_len = eff_window - t_peak;
+            if (down_len < EPS) down_len = EPS;
+            act_t = peak * ((eff_window - dt_f) / down_len);
         }
-        if (act_t < 0) act_t = 0;
+        if (act_t < 0) act_t = 0.0f;
 
-        // ---- calculate the used to t = area under bi-linear (triangle)----
         float used = 0.0f;
-        if (dt <= t_peak) {
-            // area =  0.5 * dt (width) * act_t (height)
-            // = 0.5 * (peak / t_peak) * dt^2
-            used = 0.5f * (peak / t_peak) * (static_cast<float>(dt) * static_cast<float>(dt));
+        if (dt_f <= t_peak) {
+            // left tringale：0.5 * (peak/t_peak) * dt^2
+            used = 0.5f * (peak / t_peak) * (dt_f * dt_f);
         } else {
-            // left area
+
             float area_left = 0.5f * t_peak * peak;
 
-            // right area (trapezoid)
-            float width = static_cast<float>(dt) - t_peak;
+            float width = dt_f - t_peak;
             used = area_left + 0.5f * (peak + act_t) * width;
         }
 
-        // IOB: btw 0~dose
+        // 5) IOB = dose - used, [0, dose]
         float iob = tr.dose - used;
-        if (iob < 0) iob = 0.0f;
-        if (iob > tr.dose) iob = tr.dose;
+        if (iob < 0.0f)       iob = 0.0f;
+        if (iob > tr.dose)    iob = tr.dose;
 
-        total_activity += act_t;    // current activity（U/min）
-        total_IOB      += iob;      // leftover（U）
-
+        total_activity += act_t; // U/min
+        total_IOB      += iob;   // U
     }
 
-    return {total_activity, total_IOB};
+    return { total_activity, total_IOB };
 }
 
 // Predict future BG using Eventual BG algorithm
@@ -86,7 +92,13 @@ std::pair<float, float> OpenAPS::get_BG_forecast(float current_BG,
                                                  float IOB
                                                 ) {
 
-    float naive_eventual_BG = current_BG - (IOB * ISF);
+    // when using this algorthism from slide, whenever have a meal naive will become -1000..
+    // float naive_eventual_BG = current_BG - (IOB * ISF);
+
+    // 1) use 30 min BGI, we will get a better naive value
+    float BGI_30 = - activity * ISF * 30.0f;
+    float naive_eventual_BG = current_BG + BGI_30;
+
     // deviation：if no BG_5min，naive = eventual
     float deviation = 0.0f;
     // TODO: everytime onMqttMessage deal with CGM, update this value

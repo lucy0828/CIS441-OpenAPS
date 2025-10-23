@@ -46,10 +46,10 @@ void onMqttMessage(int messageSize) {
     payload += (char)mqttClient.read();
   }
 
-  Serial.print("Message arrived on topic: ");
-  Serial.println(topic);
-  Serial.print("Payload: ");
-  Serial.println(payload);
+  // Serial.print("Message arrived on topic: ");
+  // Serial.println(topic);
+  // Serial.print("Payload: ");
+  // Serial.println(payload);
 
   // 1. Handle vp-attributes (Patient Profile)
   if (topic.endsWith("vp-attributes") || topic.indexOf("vp-attributes/response/") >= 0) {
@@ -65,10 +65,10 @@ void onMqttMessage(int messageSize) {
               int pos = 0;
 
               while (pos < bolusArray.length()) {
-                  Serial.print("[DEBUG] Current pos = ");
-                  Serial.println(pos);
-                  Serial.print("[DEBUG] bolusArray substring (remaining): ");
-                  Serial.println(bolusArray.substring(pos));
+                  // Serial.print("[DEBUG] Current pos = ");
+                  // Serial.println(pos);
+                  // Serial.print("[DEBUG] bolusArray substring (remaining): ");
+                  // Serial.println(bolusArray.substring(pos));
 
                   int timePos = bolusArray.indexOf("\"time\":", pos);
                   if (timePos == -1) break;
@@ -79,12 +79,12 @@ void onMqttMessage(int messageSize) {
                   float d = bolusArray.substring(dosePos + 7, bolusArray.indexOf(",", dosePos)).toFloat();
                   int dur = bolusArray.substring(durPos + 11, bolusArray.indexOf("}", durPos)).toInt();
 
-                  Serial.print("[DEBUG] Parsed treatment → time=");
-                  Serial.print(t);
-                  Serial.print(", dose=");
-                  Serial.print(d);
-                  Serial.print(", dur=");
-                  Serial.println(dur);
+                  // Serial.print("[DEBUG] Parsed treatment → time=");
+                  // Serial.print(t);
+                  // Serial.print(", dose=");
+                  // Serial.print(d);
+                  // Serial.print(", dur=");
+                  // Serial.println(dur);
 
                   if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
                       openaps.addInsulinTreatment(InsulinTreatment(t, d, dur));
@@ -105,7 +105,8 @@ void onMqttMessage(int messageSize) {
   }
 
   // 2. Handle cgm-openaps (CGM data)
-  else if (topic.endsWith("/cgm-openaps")) {
+  // TODO: our cgm-openaps is not workig, so I have to subscribe to /cgm directly (NEED TO FIX!)
+  else if (topic.endsWith("/cgm-openaps") || topic.endsWith("/cgm")) {
     int gStart = payload.indexOf("\"Glucose\":") + 10;
     int gEnd   = payload.indexOf(",", gStart);
     float glucose = payload.substring(gStart, gEnd).toFloat();
@@ -124,8 +125,8 @@ void onMqttMessage(int messageSize) {
       xSemaphoreGive(xDataSemaphore);
     }
 
-    Serial.print("Updated BG from CGM: ");
-    Serial.println(glucose);
+    // Serial.print("Updated BG from CGM: ");
+    // Serial.println(glucose);
   }
 
   // 3. Unknown Topic (safety)
@@ -140,7 +141,7 @@ void TaskMQTT(void *pvParameters) {
     unsigned long last = 0;
     for (;;) {
         mqttClient.poll();
-        if (millis() - last > 2000) { Serial.println("[TaskMQTT] polling"); last = millis(); }
+        if (millis() - last > 2000) { /*Serial.println("[TaskMQTT] polling");*/ last = millis(); }
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
@@ -170,7 +171,9 @@ void TaskOpenAPS(void *pvParameters) {
       float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
 
       String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
-      mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+      // TODO: the virtual component publish part is also not working!!! NEED FIX
+      // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+      mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump");
       mqttClient.print(msg);
       mqttClient.endMessage();
 
@@ -179,7 +182,7 @@ void TaskOpenAPS(void *pvParameters) {
       Serial.print(" → insulin_rate="); Serial.println(insulin_rate, 3);
     }
 
-    vTaskDelay(pdMS_TO_TICKS(5000));   // ~5 sec (TODO: should we change to 5 min?)
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
 
@@ -229,6 +232,8 @@ void setup() {
     mqttClient.endMessage();
 
     mqttClient.subscribe("cis441-541/Steady_State/cgm-openaps");
+    mqttClient.subscribe("cis441-541/Steady_State/cgm");
+
 
     //6. Create FreeRTOS task
     BaseType_t res1 = xTaskCreate(TaskMQTT, "TaskMQTT", 1024, NULL, 2, &TaskMQTTHandle);
