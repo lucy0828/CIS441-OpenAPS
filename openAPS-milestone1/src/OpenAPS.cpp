@@ -93,18 +93,14 @@ std::pair<float, float> OpenAPS::get_BG_forecast(float current_BG,
                                                 ) {
 
     // when using this algorthism from slide, whenever have a meal naive will become -1000..
-    // float naive_eventual_BG = current_BG - (IOB * ISF);
+    float naive_eventual_BG = current_BG - (IOB * ISF);
 
-    // 1) use 30 min BGI, we will get a better naive value
-    float BGI_30 = - activity * ISF * 30.0f;
-    float naive_eventual_BG = current_BG + BGI_30;
-
-    // deviation：if no BG_5min，naive = eventual
     float deviation = 0.0f;
+    float predBGI  = - activity * ISF * 5.0f;        // predict 5 min change
     // TODO: everytime onMqttMessage deal with CGM, update this value
     if (!isnan(prev_BG)) {
         float delta    = current_BG - prev_BG;      // actual change in 5 min
-        float predBGI  = - activity * ISF * 5.0f;        // predict 5 min change
+        
         deviation      = (30.0f / 5.0f) * (delta - predBGI); // 30 min prediction
     }
 

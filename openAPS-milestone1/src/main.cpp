@@ -62,7 +62,7 @@ void onMqttMessage(int messageSize) {
           int arrEnd   = payload.indexOf("]", arrStart);
           if (arrStart != -1 && arrEnd != -1) {
               String bolusArray = payload.substring(arrStart + 1, arrEnd);
-              int pos = 0;
+              unsigned int pos = 0;
 
               while (pos < bolusArray.length()) {
                   // Serial.print("[DEBUG] Current pos = ");
@@ -105,8 +105,7 @@ void onMqttMessage(int messageSize) {
   }
 
   // 2. Handle cgm-openaps (CGM data)
-  // TODO: our cgm-openaps is not workig, so I have to subscribe to /cgm directly (NEED TO FIX!)
-  else if (topic.endsWith("/cgm-openaps") || topic.endsWith("/cgm")) {
+  else if (topic.endsWith("/cgm-openaps") ) {
     int gStart = payload.indexOf("\"Glucose\":") + 10;
     int gEnd   = payload.indexOf(",", gStart);
     float glucose = payload.substring(gStart, gEnd).toFloat();
@@ -169,20 +168,20 @@ void TaskOpenAPS(void *pvParameters) {
     if (localNew || localNewIns) {
       // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
       float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
-
+      // NOW WE NEED TO PUBLISH BASAL RATE!!!
       String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       // TODO: the virtual component publish part is also not working!!! NEED FIX
-      // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
-      mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump");
+      mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+      // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump");
       mqttClient.print(msg);
       mqttClient.endMessage();
 
       Serial.print("[OpenAPS] t="); Serial.print(tValue);
       Serial.print(" BG="); Serial.print(bgValue);
-      Serial.print(" → insulin_rate="); Serial.println(insulin_rate, 3);
+      Serial.print(" → insulin_rate (basal)="); Serial.println(insulin_rate, 3);
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(500));
   }
 }
 
@@ -232,7 +231,7 @@ void setup() {
     mqttClient.endMessage();
 
     mqttClient.subscribe("cis441-541/Steady_State/cgm-openaps");
-    mqttClient.subscribe("cis441-541/Steady_State/cgm");
+    // mqttClient.subscribe("cis441-541/Steady_State/cgm");
 
 
     //6. Create FreeRTOS task
@@ -242,10 +241,8 @@ void setup() {
     Serial.print("TaskMQTT create: "); Serial.println(res1 == pdPASS ? "OK" : "FAIL");
     Serial.print("TaskOpenAPS create: "); Serial.println(res2 == pdPASS ? "OK" : "FAIL");
     
-    //Serial.println("About to start scheduler");
     //6. start scheduler
     vTaskStartScheduler();
-    //Serial.println("Scheduler started (you should never see this if RTOS runs).");
 }
 
 void loop() {
