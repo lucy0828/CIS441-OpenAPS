@@ -19,6 +19,8 @@ class OpenAPS {
 public:
     OpenAPS();
 
+    void noteNewBG(float bg, long t_min);
+
     // Add a new insulin treatment to the list
     void addInsulinTreatment(InsulinTreatment t);
 
@@ -28,7 +30,8 @@ public:
     // Predict future BG (naive and eventual)
     std::pair<float, float> get_BG_forecast(float current_BG,
                                             float activity,
-                                            float IOB);
+                                            float IOB
+                                        );
 
     // Determine basal rate based on BG thresholds and forecast
     float get_basal_rate(long t, float current_BG);
@@ -41,6 +44,10 @@ private:
     float DIA = 3.0f;    // Duration of Insulin Action (hours)
     float target_BG = 110.0f;
     float threshold_BG = 70.0f;
+    //
+    float prev_BG = NAN;
+    float last_BG = NAN;        // recent BG
+    long  last_BG_time = -1;    // recent BG time in min
 };
 
 #endif

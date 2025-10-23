@@ -56,33 +56,46 @@ void onMqttMessage(int messageSize) {
     if (!attributeReceived) {
       Serial.println("Processing Patient Profile...");
 
-      // Parse bolus_insulins array from payload
-      // Example payload snippet:
-      // {"PatientProfile": {"bolus_insulins":[{"time":12345,"dose":2.0,"duration":30}, ... ]}}
-      int arrStart = payload.indexOf("[");
-      int arrEnd   = payload.indexOf("]");
-      if (arrStart != -1 && arrEnd != -1) {
-        String bolusArray = payload.substring(arrStart + 1, arrEnd);
-        int pos = 0;
-        while (pos < bolusArray.length()) {
-          int timePos = bolusArray.indexOf("\"time\":", pos);
-          if (timePos == -1) break;
-          int dosePos = bolusArray.indexOf("\"dose\":", pos);
-          int durPos  = bolusArray.indexOf("\"duration\":", pos);
+      int bolusPos = payload.indexOf("\"bolus_insulins\"");
+      if (bolusPos != -1) {
+          int arrStart = payload.indexOf("[", bolusPos);
+          int arrEnd   = payload.indexOf("]", arrStart);
+          if (arrStart != -1 && arrEnd != -1) {
+              String bolusArray = payload.substring(arrStart + 1, arrEnd);
+              int pos = 0;
 
-          long t  = bolusArray.substring(timePos + 7, bolusArray.indexOf(",", timePos)).toInt();
-          float d = bolusArray.substring(dosePos + 7, bolusArray.indexOf(",", dosePos)).toFloat();
-          int dur = bolusArray.substring(durPos + 11, bolusArray.indexOf("}", durPos)).toInt();
+              while (pos < bolusArray.length()) {
+                  Serial.print("[DEBUG] Current pos = ");
+                  Serial.println(pos);
+                  Serial.print("[DEBUG] bolusArray substring (remaining): ");
+                  Serial.println(bolusArray.substring(pos));
 
-          // Protect shared structure
-          if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
-            openaps.addInsulinTreatment(InsulinTreatment(t, d, dur));
-            xSemaphoreGive(xDataSemaphore);
+                  int timePos = bolusArray.indexOf("\"time\":", pos);
+                  if (timePos == -1) break;
+                  int dosePos = bolusArray.indexOf("\"dose\":", pos);
+                  int durPos  = bolusArray.indexOf("\"duration\":", pos);
+
+                  long t  = bolusArray.substring(timePos + 7, bolusArray.indexOf(",", timePos)).toInt();
+                  float d = bolusArray.substring(dosePos + 7, bolusArray.indexOf(",", dosePos)).toFloat();
+                  int dur = bolusArray.substring(durPos + 11, bolusArray.indexOf("}", durPos)).toInt();
+
+                  Serial.print("[DEBUG] Parsed treatment → time=");
+                  Serial.print(t);
+                  Serial.print(", dose=");
+                  Serial.print(d);
+                  Serial.print(", dur=");
+                  Serial.println(dur);
+
+                  if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
+                      openaps.addInsulinTreatment(InsulinTreatment(t, d, dur));
+                      xSemaphoreGive(xDataSemaphore);
+                  }
+
+                  pos = bolusArray.indexOf("}", pos) + 1;
+              }
           }
-
-          pos = bolusArray.indexOf("}", pos) + 1;
-        }
       }
+
 
       attributeReceived     = true;
       newInsulinTreatment   = true;
@@ -100,6 +113,8 @@ void onMqttMessage(int messageSize) {
     int tStart = payload.indexOf("\"time\":") + 7;
     int tEnd   = payload.indexOf("}", tStart);
     long timeVal = payload.substring(tStart, tEnd).toInt();
+
+    openaps.noteNewBG(glucose, timeVal);  // update prev_BG and last_BG
 
     // update shared BG data
     if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
@@ -134,40 +149,37 @@ void TaskOpenAPS(void *pvParameters) {
     // TODO: Implement OpenAPS task
     // Process new data, calculate basal rate, and publish to MQTT
 
-    // *** MILESTONE 1 ONLY ***
-    // ------------------------------
-    // dummy calculation for insulin rate:
-    // if new incoming BG > 120 then
-    //   insulin_rate = 0.5
-    // else
-    //   insuln_rate = 0.0
-    // ==============================
-
-    for (;;) {
+  for (;;) {
     bool localNew = false;
-    float bgValue = 0.0;
+    bool localNewIns = false;
+    float bgValue = 0.0f;
+    long  tValue = 0;
 
     if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
-      localNew  = newBGData;
-      bgValue   = current_BG;
-      newBGData = false;
+      localNew        = newBGData;
+      localNewIns     = newInsulinTreatment;
+      bgValue         = current_BG;
+      tValue          = current_time;
+      newBGData       = false;
+      newInsulinTreatment = false;
       xSemaphoreGive(xDataSemaphore);
     }
 
-    if (localNew) {
-      // Milestone 1 dummy logic
-      float insulin_rate = (bgValue > 120.0) ? 0.5 : 0.0;
+    if (localNew || localNewIns) {
+      // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
+      float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
 
-      String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 2) + "}";
+      String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
       mqttClient.print(msg);
       mqttClient.endMessage();
 
-      Serial.print("BG="); Serial.print(bgValue);
-      Serial.print(" → Published insulin_rate="); Serial.println(insulin_rate);
+      Serial.print("[OpenAPS] t="); Serial.print(tValue);
+      Serial.print(" BG="); Serial.print(bgValue);
+      Serial.print(" → insulin_rate="); Serial.println(insulin_rate, 3);
     }
-    //Serial.println("[TaskOpenAPS] running...");
-    vTaskDelay(pdMS_TO_TICKS(5000));   // one simulation step (~5 s)
+
+    vTaskDelay(pdMS_TO_TICKS(5000));   // ~5 sec (TODO: should we change to 5 min?)
   }
 }
 
@@ -192,6 +204,10 @@ void setup() {
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
+   //5. Create binary semaphore for shared data
+    xDataSemaphore = xSemaphoreCreateBinary();
+    xSemaphoreGive(xDataSemaphore);   // initialize as 'available'
+
     // 3. Configure and connect MQTT client
     mqttClient.setUsernamePassword("cis441-541_2025", "cukwy2-geNwit-puqced");
     mqttClient.onMessage(onMqttMessage);
@@ -213,10 +229,6 @@ void setup() {
     mqttClient.endMessage();
 
     mqttClient.subscribe("cis441-541/Steady_State/cgm-openaps");
-
-    //5. Create binary semaphore for shared data
-    xDataSemaphore = xSemaphoreCreateBinary();
-    xSemaphoreGive(xDataSemaphore);   // initialize as 'available'
 
     //6. Create FreeRTOS task
     BaseType_t res1 = xTaskCreate(TaskMQTT, "TaskMQTT", 1024, NULL, 2, &TaskMQTTHandle);
