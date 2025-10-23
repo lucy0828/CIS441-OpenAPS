@@ -110,7 +110,7 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
     // if (current_BG > target_BG) → increase basal
     // else if (current_BG < threshold_BG) → decrease basal
     // add new treatment to list
-    // ---- customize variables ----
+    // ---- customize variables (SET BY US) ----
     const float basal_default = 0.5f;   // U/hr
     const float basal_min     = 0.0f;   // U/hr
     const float basal_max     = 2.0f;   // U/hr

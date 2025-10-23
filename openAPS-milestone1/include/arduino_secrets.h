@@ -1,5 +1,5 @@
-#define SECRET_SSID "Jimmy iPhone 16pm"
-#define SECRET_PASS "gimepass"
+#define SECRET_SSID "C++ is evil"
+#define SECRET_PASS "PythonIsBetter"
 
 
 // #define SECRET_SSID "AirPennNet-Device"
