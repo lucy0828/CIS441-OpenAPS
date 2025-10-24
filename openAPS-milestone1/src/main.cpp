@@ -168,7 +168,7 @@ void TaskOpenAPS(void *pvParameters) {
     if (localNew || localNewIns) {
       // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
       float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
-      // NOW WE NEED TO PUBLISH BASAL RATE!!!
+      // String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       // TODO: the virtual component publish part is also not working!!! NEED FIX
       mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
@@ -176,9 +176,9 @@ void TaskOpenAPS(void *pvParameters) {
       mqttClient.print(msg);
       mqttClient.endMessage();
 
-      Serial.print("[OpenAPS] t="); Serial.print(tValue);
-      Serial.print(" BG="); Serial.print(bgValue);
-      Serial.print(" → insulin_rate (basal)="); Serial.println(insulin_rate, 3);
+      // Serial.print("[OpenAPS] Time="); Serial.print(tValue);
+      // Serial.print(" Current BG="); Serial.print(bgValue);
+      // Serial.print(" → insulin_rate (basal)="); Serial.println(insulin_rate, 3);
     }
 
     vTaskDelay(pdMS_TO_TICKS(500));

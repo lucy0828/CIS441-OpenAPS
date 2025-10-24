@@ -100,7 +100,6 @@ std::pair<float, float> OpenAPS::get_BG_forecast(float current_BG,
     // TODO: everytime onMqttMessage deal with CGM, update this value
     if (!isnan(prev_BG)) {
         float delta    = current_BG - prev_BG;      // actual change in 5 min
-        
         deviation      = (30.0f / 5.0f) * (delta - predBGI); // 30 min prediction
     }
 
@@ -136,24 +135,29 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
 
     if (current_BG < threshold_BG || eventual_BG < threshold_BG) {
         // set insulin rate to 0
+        Serial.print("Case 1:");
         basal_rate = 0.0f;
 
-    } else if (eventual_BG < target_BG) {
+    } else if (eventual_BG >= threshold_BG && eventual_BG < target_BG) {
         if (naive_eventual_BG < 40.0f) {
+            Serial.print("Case 2:");
             basal_rate = 0.0f;
         } else {
+            Serial.print("Case 3:");
             // multiplication by 2 to increase hypo safety (feel free to tune)
             float insulinReq = 2.0f * (eventual_BG - target_BG) / ISF;  // U 
             basal_rate = basal_default + (insulinReq / DIA);             // U/hr
             //set rate to (current basal + insulinReq / DIA) to deliver insulinReq less insulin over DIA mins
         }
 
-    } else if (eventual_BG > target_BG) {
+    } else if (eventual_BG >= target_BG) {
+        Serial.print("Case 4:");
         float insulinReq = (eventual_BG - target_BG) / ISF / 10.0f;      // U
         basal_rate = basal_default + (insulinReq / DIA);                 // U/hr
 
     } else {
         // maintain
+        Serial.print("Case 5:");
         basal_rate = basal_default;
     }
 
@@ -165,11 +169,11 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
     addInsulinTreatment(InsulinTreatment{ t, dose_this_window, static_cast<int>(kWindowMin) });
 
     // debug print
-    Serial.print("[Basal] t="); Serial.print(t);
-    Serial.print(" BG="); Serial.print(current_BG, 1);
-    Serial.print(" naive="); Serial.print(naive_eventual_BG, 1);
-    Serial.print(" eventual="); Serial.print(eventual_BG, 1);
-    Serial.print(" rate="); Serial.println(basal_rate, 3);
+    Serial.print("Time="); Serial.print(t);
+    Serial.print(" Current BG="); Serial.print(current_BG, 1);
+    Serial.print(" Naive BG="); Serial.print(naive_eventual_BG, 1);
+    Serial.print(" Eventual BG="); Serial.print(eventual_BG, 1);
+    Serial.print(" Basal Rate="); Serial.println(basal_rate, 3);
 
     return basal_rate;
 }
