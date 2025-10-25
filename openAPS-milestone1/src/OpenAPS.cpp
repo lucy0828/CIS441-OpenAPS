@@ -16,7 +16,7 @@ std::pair<float, float> OpenAPS::insulin_calculations(long t) {
     float total_IOB = 0.0f;
     
     const float peak_frac = 75.0f / 180.0f; // based on OPENAPS PPT
-    const float DIA_min = DIA * 60.0f;
+    const float DIA_min = DIA;
     const float EPS       = 1e-6f;            // prevent /0
 
     // TODO (Milestone 2): compute activity and IOB using time, dose, duration

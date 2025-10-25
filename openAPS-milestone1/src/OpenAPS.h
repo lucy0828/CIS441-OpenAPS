@@ -41,7 +41,7 @@ private:
 
     // Constants (will be tuned or read from patient profile)
     float ISF = 5.0f;   // Insulin Sensitivity Factor (mg/dL per unit)
-    float DIA = 1.5f;    // Duration of Insulin Action (hours)
+    float DIA = 90.0f;    // Duration of Insulin Action (hours)
     float target_BG = 100.0f;
     float threshold_BG = 50.0f;
     //
