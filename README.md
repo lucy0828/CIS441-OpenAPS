@@ -1,5 +1,10 @@
 # CIS441-OpenAPS
 
+## Screen capture video of the real-time plot on Codio dashboard
+[OPEN APS project demo](https://www.loom.com/share/af499ebd1d734c1cacd3a1d0072272a0?sid=0633ee18-18eb-41f1-be5c-0420056a6a32)
+
+Please refer to Codio for milestone 1 part 1
+
 ## Overall Instruction
 
 **OpenAPS Logic (on Arduino)**: Implement the EventualBG algorithm to predict the eventual stable BG level once all active insulin has finished working. Optionally, you can implement COB-based Predictions (COBpredBGs), which predict BG changes based on the announced Carbohydrates on Board (COB).
@@ -42,10 +47,12 @@ In addition, we've set up Virtual Patient in Codio as well. Please remember to i
 1. Complete the main.cpp file with your implementation.
 
 2. Compile with Makefile.
-
-```
 make
-```
+
+3. export env. and check this is stored in program
+export TEAM_NAME=Steady_State
+echo $TEAM_NAME
+# should print: Steady_State
 
 3. Execute the program.
 ```
@@ -73,7 +80,7 @@ pip install -r requirements.txt
 
 3. Run main.py to simulate the virtual patient with a mode parameter (0: without OpenAPS, 1: with OpenAPS).
 ```
-python main.py <mode>
+python3 main.py 1
 ```
 
 

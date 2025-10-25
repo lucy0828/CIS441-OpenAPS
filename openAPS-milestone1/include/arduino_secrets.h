@@ -1,2 +1,6 @@
-#define SECRET_SSID "your_WiFi_SSID"
-#define SECRET_PASS "your_WiFi_password"
+#define SECRET_SSID "C++ is evil"
+#define SECRET_PASS "PythonIsBetter"
+
+
+// #define SECRET_SSID "AirPennNet-Device"
+// #define SECRET_PASS "penn1740wifi"

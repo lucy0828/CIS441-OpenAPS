@@ -1,0 +1,15 @@
+{
+    "arduino.defaultBaudRate": 115200,
+    "arduino.logLevel": "info",
+    "arduino.path": "/Applications/Arduino.app",
+    "arduino.commandPath": "Contents/Java/arduino-builder",
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.autocomplete": "Default",
+    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.configurationWarnings": "Disabled",
+    "files.associations": {
+        "Arduino.h": "cpp",
+        "*.ino": "cpp",
+        "*.hpp": "cpp"
+    }
+}
