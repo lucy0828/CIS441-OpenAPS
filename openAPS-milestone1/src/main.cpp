@@ -26,7 +26,8 @@ volatile bool newInsulinTreatment = false;
 volatile bool attributeReceived = false;
 
 SemaphoreHandle_t xDataSemaphore;   // protects shared BG data
-
+volatile bool publishPending = false;
+String pendingMsg = "";
 
 
 //functions
@@ -140,8 +141,21 @@ void TaskMQTT(void *pvParameters) {
     unsigned long last = 0;
     for (;;) {
         mqttClient.poll();
-        if (millis() - last > 2000) { /*Serial.println("[TaskMQTT] polling");*/ last = millis(); }
-        vTaskDelay(pdMS_TO_TICKS(500));
+
+        if (publishPending) {
+          if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
+            String msgCopy = pendingMsg;
+            publishPending = false;  // reset flag
+            xSemaphoreGive(xDataSemaphore);
+
+            mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+            mqttClient.print(msgCopy);
+            mqttClient.endMessage();
+
+          }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
@@ -169,16 +183,23 @@ void TaskOpenAPS(void *pvParameters) {
       // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
       float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
       String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
-      mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
-      mqttClient.print(msg);
-      mqttClient.endMessage();
+      
+      if (xSemaphoreTake(xDataSemaphore, portMAX_DELAY) == pdTRUE) {
+        pendingMsg = msg;
+        publishPending = true;
+        xSemaphoreGive(xDataSemaphore);
+      }
+      
+      // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+      // mqttClient.print(msg);
+      // mqttClient.endMessage();
 
       // Serial.print("[OpenAPS] Time="); Serial.print(tValue);
       // Serial.print(" Current BG="); Serial.print(bgValue);
       // Serial.print(" → insulin_rate (basal)="); Serial.println(insulin_rate, 3);
     }
 
-    vTaskDelay(pdMS_TO_TICKS(500));
+    vTaskDelay(pdMS_TO_TICKS(200));
   }
 }
 

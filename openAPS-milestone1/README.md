@@ -69,4 +69,3 @@ python3 main.py 1
 #### 3. Arduino OpenAPS (Control algorithm)
 - Go to the **PlatformIO tab** in VS Code
 - Click **Upload and Monitor**
-
