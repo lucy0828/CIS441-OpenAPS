@@ -40,10 +40,10 @@ private:
     std::vector<InsulinTreatment> treatments;
 
     // Constants (will be tuned or read from patient profile)
-    float ISF = 50.0f;   // Insulin Sensitivity Factor (mg/dL per unit)
-    float DIA = 3.0f;    // Duration of Insulin Action (hours)
-    float target_BG = 110.0f;
-    float threshold_BG = 70.0f;
+    float ISF = 5.0f;   // Insulin Sensitivity Factor (mg/dL per unit)
+    float DIA = 1.5f;    // Duration of Insulin Action (hours)
+    float target_BG = 100.0f;
+    float threshold_BG = 50.0f;
     //
     float prev_BG = NAN;
     float last_BG = NAN;        // recent BG

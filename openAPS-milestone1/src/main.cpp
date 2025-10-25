@@ -168,11 +168,8 @@ void TaskOpenAPS(void *pvParameters) {
     if (localNew || localNewIns) {
       // Milestone 2 algorithm：calculate activity/IOB/forecast，and update window treatment
       float insulin_rate = openaps.get_basal_rate(tValue, bgValue);  // U/hr
-      // String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
       String msg = String("{\"insulin_rate\": ") + String(insulin_rate, 3) + "}";
-      // TODO: the virtual component publish part is also not working!!! NEED FIX
       mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
-      // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump");
       mqttClient.print(msg);
       mqttClient.endMessage();
 
@@ -248,3 +245,5 @@ void setup() {
 void loop() {
     // Empty. Tasks are handled by FreeRTOS
 }
+
+
