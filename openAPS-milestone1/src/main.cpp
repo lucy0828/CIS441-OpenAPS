@@ -28,6 +28,7 @@ volatile bool attributeReceived = false;
 SemaphoreHandle_t xDataSemaphore;   // protects shared BG data
 volatile bool publishPending = false;
 String pendingMsg = "";
+volatile bool patient_diabetic = true; // default to diabetic until profile received
 
 
 //functions
@@ -40,12 +41,18 @@ void onMqttMessage(int messageSize) {
     // Handle attribute updates and CGM data
     // Update openAPS, current_BG, current_time, and flags as needed
   String topic = mqttClient.messageTopic();
-  String payload = "";
+  String payload = mqttClient.readString();
+  // Serial.println(topic);
+  // Serial.println(payload);
 
   // Read the entire incoming payload byte by byte
   while (mqttClient.available()) {
     payload += (char)mqttClient.read();
   }
+
+  String lowerPayload = payload;
+  lowerPayload.toLowerCase();    // make it case-insensitive
+  lowerPayload.trim();           // remove leading/trailing whitespace/newlines
 
   // Serial.print("Message arrived on topic: ");
   // Serial.println(topic);
@@ -56,6 +63,18 @@ void onMqttMessage(int messageSize) {
   if (topic.endsWith("vp-attributes") || topic.indexOf("vp-attributes/response/") >= 0) {
     if (!attributeReceived) {
       Serial.println("Processing Patient Profile...");
+
+      // Parse diabetic status
+      int diabeticPos = payload.indexOf("\"diabetic\":");
+      if (diabeticPos != -1) {
+        int diabeticStart = diabeticPos + 11; // after "diabetic":
+        int diabeticEnd = payload.indexOf(",", diabeticStart);
+        if (diabeticEnd == -1) diabeticEnd = payload.indexOf("}", diabeticStart);
+        String diabeticStr = payload.substring(diabeticStart, diabeticEnd);
+        diabeticStr.trim();
+        patient_diabetic = (diabeticStr == "true");
+        openaps.patient_diabetic = patient_diabetic; // Update OpenAPS instance
+      }
 
       int bolusPos = payload.indexOf("\"bolus_insulins\"");
       if (bolusPos != -1) {
@@ -109,10 +128,12 @@ void onMqttMessage(int messageSize) {
   else if (topic.endsWith("/cgm-openaps") ) {
     int gStart = payload.indexOf("\"Glucose\":") + 10;
     int gEnd   = payload.indexOf(",", gStart);
+    if (gEnd == -1) gEnd = payload.indexOf("}", gStart); // fallback if no comma
     float glucose = payload.substring(gStart, gEnd).toFloat();
 
     int tStart = payload.indexOf("\"time\":") + 7;
-    int tEnd   = payload.indexOf("}", tStart);
+    int tEnd   = payload.indexOf(",", tStart);
+    if (tEnd == -1) tEnd = payload.indexOf("}", tStart); // fallback if no comma
     long timeVal = payload.substring(tStart, tEnd).toInt();
 
     openaps.noteNewBG(glucose, timeVal);  // update prev_BG and last_BG
@@ -148,9 +169,9 @@ void TaskMQTT(void *pvParameters) {
             publishPending = false;  // reset flag
             xSemaphoreGive(xDataSemaphore);
 
-            mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
-            mqttClient.print(msgCopy);
-            mqttClient.endMessage();
+            // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+            // mqttClient.print(msgCopy);
+            // mqttClient.endMessage();
 
           }
         }
@@ -266,5 +287,3 @@ void setup() {
 void loop() {
     // Empty. Tasks are handled by FreeRTOS
 }
-
-

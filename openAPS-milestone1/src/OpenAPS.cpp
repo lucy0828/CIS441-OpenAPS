@@ -121,9 +121,12 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
     // else if (current_BG < threshold_BG) → decrease basal
     // add new treatment to list
     // ---- customize variables (SET BY US) ----
-    float basal_default = has_last_rate ? last_basal_rate : 0.0f;
     const float basal_min     = 0.0f;   // U/hr
-    const float basal_max     = 2.0f;   // U/hr
+    const float basal_max     = 1.0f;   // U/hr - reduced max basal rate
+    float basal_default = has_last_rate ? last_basal_rate : 0.0f;
+
+    // For non-diabetic profiles, provide minimal physiological insulin (~0.1–0.2 U/h)
+    const float basal_non_diabetic = 0.12f;   // background secretion replacement
 
     auto clampf = [](float v, float lo, float hi){
         return v < lo ? lo : (v > hi ? hi : v);
@@ -135,7 +138,10 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
     auto [activity, IOB] = insulin_calculations(t);
     auto [naive_eventual_BG, eventual_BG] = get_BG_forecast(current_BG, activity, IOB);
 
-    if (current_BG < threshold_BG || eventual_BG < threshold_BG) {
+    if (!patient_diabetic) {
+        // never fully shut off basal delivery for a non-diabetic virtual patient
+        basal_rate = max(basal_rate, basal_non_diabetic);
+    } else if (current_BG < threshold_BG || eventual_BG < threshold_BG) {
         // set insulin rate to 0
         Serial.print("Case 1:");
         basal_rate = 0.0f;
@@ -162,6 +168,8 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
         Serial.print("Case 5:");
         basal_rate = basal_default;
     }
+
+    
 
     // limit in the boundary
     basal_rate = clampf(basal_rate, basal_min, basal_max);

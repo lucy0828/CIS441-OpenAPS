@@ -35,15 +35,16 @@ public:
 
     // Determine basal rate based on BG thresholds and forecast
     float get_basal_rate(long t, float current_BG);
+    bool patient_diabetic = true;
 
 private:
     std::vector<InsulinTreatment> treatments;
 
     // Constants (will be tuned or read from patient profile)
-    float ISF = 5.0f;   // Insulin Sensitivity Factor (mg/dL per unit)
+    float ISF = 3.0f;   // Insulin Sensitivity Factor (mg/dL per unit) - reduced sensitivity
     float DIA = 90.0f;    // Duration of Insulin Action (min)
-    float target_BG = 100.0f;
-    float threshold_BG = 50.0f;
+    float target_BG = 120.0f;  // Higher target glucose
+    float threshold_BG = 70.0f;  // Higher safety threshold
     //
     float prev_BG = NAN;
     float last_BG = NAN;        // recent BG
