@@ -163,7 +163,7 @@ float OpenAPS::get_basal_rate(long t, float current_BG) {
     float basal_default = has_last_rate ? last_basal_rate : 0.0f;
 
     // For non-diabetic profiles, provide minimal physiological insulin (~0.1–0.2 U/h)
-    const float basal_non_diabetic = 0.12f;   // background secretion replacement
+    const float basal_non_diabetic = 0.0f;   // background secretion replacement
 
     auto clampf = [](float v, float lo, float hi){
         return v < lo ? lo : (v > hi ? hi : v);
