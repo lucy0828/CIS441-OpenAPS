@@ -93,22 +93,59 @@ std::pair<float, float> OpenAPS::get_BG_forecast(float current_BG,
                                                 ) {
 
     // when using this algorthism from slide, whenever have a meal naive will become -1000..
+    // Step 1: Base (naive) forecast from insulin
     float naive_eventual_BG = current_BG - (IOB * ISF);
-
-    float predBGI = - activity * ISF * 5.0f; 
-
-    float deviation = 0.0f; 
+    float predBGI = -activity * ISF * 5.0f;   // predicted 5-min BG change due to insulin
+    float deviation = 0.0f;
 
     if (!isnan(prev_BG)) {
         float delta = current_BG - prev_BG;  // actual 5-min change in BG
         deviation = (30.0f / 5.0f) * (delta - predBGI);
     }
 
-    // predict 5 min change 
-    // TODO: everytime onMqttMessage deal with CGM, update this value 
-    float eventual_BG = naive_eventual_BG + deviation; 
+    // Initial eventual BG including deviation
+    float eventual_BG = naive_eventual_BG + deviation;
 
-    return {naive_eventual_BG, eventual_BG};
+    //COB (Carbs on Board) Forecast
+    const float CSF = 4.0f;                     // Carb Sensitivity Factor (mg/dL per g)
+    const float assumedCarbAbsorptionRate = 20.0f;  // g/hour
+    const float mealCOB = 40.0f;                // placeholder COB (grams)
+    const float lastCarbAge_hr = 1.0f;          // hours since last carb
+
+    // Compute remaining carb absorption time (Λ-shaped curve)
+    float remainingCATimeMin = max(3.0f, mealCOB / assumedCarbAbsorptionRate);
+    float remainingCATime_hr = remainingCATimeMin + 1.5f * lastCarbAge_hr;
+
+    // Peak carb effect midpoint (triangular approximation)
+    float remainingCarbs = mealCOB;
+    float remainingCIpeak = remainingCarbs * CSF * 5.0f / 60.0f /
+                            (remainingCATime_hr / 2.0f);
+
+    //Forecast COBpredBG over 4 hours
+    float ci = deviation - predBGI;
+    float cid = min(remainingCATime_hr * 60.0f / 5.0f / 2.0f,
+                    max(0.0f, mealCOB * CSF / max(ci, 1.0f)));
+
+    float COBpredBG = current_BG;
+
+    for (int n = 1; n <= 48; ++n) { // 48 × 5min = 4h
+        // Update predicted insulin impact
+        predBGI = -activity * ISF * 5.0f;
+
+        // Predicted carb effect decays linearly across remainingCATime
+        float predCI = max(0.0f,
+                           max(0.0f, ci) * (1.0f - (float)n / max(cid * 2.0f, 1.0f)));
+
+        // Update BG prediction
+        COBpredBG = COBpredBG + predBGI + predCI;
+
+        // stop after 4 hours
+        if (n * 5.0f / 60.0f >= 4.0f) break;
+
+    }
+    // predict 5 min change
+    // TODO: everytime onMqttMessage deal with CGM, update this value
+    return {naive_eventual_BG, COBpredBG};
 }
 
 // Determine basal insulin rate

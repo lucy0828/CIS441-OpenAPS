@@ -169,9 +169,9 @@ void TaskMQTT(void *pvParameters) {
             publishPending = false;  // reset flag
             xSemaphoreGive(xDataSemaphore);
 
-            // mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
-            // mqttClient.print(msgCopy);
-            // mqttClient.endMessage();
+            mqttClient.beginMessage("cis441-541/Steady_State/insulin-pump-openaps");
+            mqttClient.print(msgCopy);
+            mqttClient.endMessage();
 
           }
         }
