@@ -1,10 +1,10 @@
 # OpenAPS (Open Artificial Pancreas System) - Milestone 2
 
-## Demo Video
+## 🎥 Demo Video
 
 [OpenAPS Project Demo](https://www.loom.com/share/cebe19fa680b4c6697cc93dfe68d5df5)
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 CIS541OpenAPS_proj_Steady_State-2/
@@ -38,7 +38,7 @@ CIS541OpenAPS_proj_Steady_State-2/
 └── README.md                   # This file
 ```
 
-## How to Run the System
+## 🚀 How to Run the System
 
 ### Prerequisites
 - **Configure WiFi credentials** in `openAPS-milestone2/include/arduino_secrets.h`:
@@ -69,4 +69,3 @@ python3 main.py 1
 #### 3. Arduino OpenAPS (Control algorithm)
 - Go to the **PlatformIO tab** in VS Code
 - Click **Upload and Monitor**
-

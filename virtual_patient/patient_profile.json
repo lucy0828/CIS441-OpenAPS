@@ -52,9 +52,9 @@
       "simu_interval": 5,
       "simu_length": 300,
       "init_state": {
-        "G0": 110,
+        "G0": 120,
         "X0": 0,
-        "I0": 15
+        "I0": 20
       }
     }
   }
